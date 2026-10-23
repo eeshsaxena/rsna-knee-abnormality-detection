@@ -1,3 +1,15 @@
+# >>> UPDATE 2026-10-23 23:30 IST: WRITEUP PUBLISHED, REPO PUBLIC <<<
+- **Kaggle solution writeup PUBLISHED** (Eesh's go, posted via his Chrome): https://www.kaggle.com/competitions/rsna-knee-abnormality-detection/writeups/246th-place-silver-report-labels-are-not-expert . Title "246th Place (Silver): Report Labels Are Not Expert Labels"; 5 gallery figures (coupling, pipeline, oai_validation, lb_progress, dose_curve); tags Medicine / Computer Vision / Ensembling; project links = final notebook + GitHub repo; listed on the competition Writeups tab. Source: writeup/kaggle_body_gallery.md (+ kaggle_title.txt), figures writeup/figs/ (src/make_figs.py).
+- Final notebook eeshsaxena/rsna-sub-v224r6c4pw25lomm05mcl10j made PUBLIC (pick A, swide).
+- GitHub repo https://github.com/eeshsaxena/rsna-knee-abnormality-detection made PUBLIC (Eesh's choice); README now has the private result + writeup link; writeup/ committed (figures allowlisted).
+- Acknowledgements name teammates dreaddevelopment, jingshuifu, akkigupta2005 (Akanksha Gupta).
+- Nothing left open for this competition.
+
+# >>> PRIVATE RESULT 2026-10-23 13:20 IST <<<
+- **FINAL PRIVATE: rank 246 / 6,425, score .944, SILVER** (gold <= r22, silver <= r321, bronze <= r642). Picks swide 57464326 and r6pw20 C3 57523232 both private .944.
+- Private by entry (display): S6F .942; R6 / HW / a25 / c4 .943; every E-OA entry (eoa10/20/30, pw20/25/30, swide, cons) .944; pf10 .944; fr100 .943. E-OA (+.001) held on private.
+- Writeup in progress: rsna-knee/writeup/ (figures + draft; to be uploaded to Kaggle writeups on Eesh's request). DONE, see the 23:30 block.
+
 # >>> UPDATE 2026-10-23 (repo) <<<
 - Pushed to PRIVATE GitHub repo https://github.com/eeshsaxena/rsna-knee-abnormality-detection (branch main, commit 648908d): 4,300 code / doc files (allowlist .gitignore). Pre-push audit (_audit/, not committed): no credentials; removed 148 report-text task files (relabel_pilot cc_tasks) and a teamup draft with third-party personal data; redacted one OAI id comment. Before going PUBLIC: see the audit's list (third-party notebooks, box IP, teammate names, license NOTICE).
 

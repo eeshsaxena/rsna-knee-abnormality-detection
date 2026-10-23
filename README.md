@@ -6,12 +6,16 @@ and the day-by-day research log. Data, model weights, outputs and caches are del
 
 ## Result
 
-| | submission | public LB |
-|---|---|---|
-| Final pick A | `swide` 57464326 | .960 |
-| Final pick B | `r6pw20` copy 3, 57523232 | .959 |
+| | submission | public LB | private LB |
+|---|---|---|---|
+| Final pick A | `swide` 57464326 | .960 | .944 |
+| Final pick B | `r6pw20` copy 3, 57523232 | .959 | .944 |
 
-Public rank at the close of reads: 157 / 6,396 (silver zone). Private result: see the final HANDOFF block.
+**Final private rank: 246 / 6,425, silver medal.** Public rank at the close was 157 / 6,396.
+
+Solution writeup (figures, method, what did not work):
+https://www.kaggle.com/competitions/rsna-knee-abnormality-detection/writeups/246th-place-silver-report-labels-are-not-expert
+(source and figures in `writeup/`). Final notebook: https://www.kaggle.com/code/eeshsaxena/rsna-sub-v224r6c4pw25lomm05mcl10j
 
 ## What moved the score
 
@@ -22,7 +26,7 @@ Public rank at the close of reads: 157 / 6,396 (silver zone). Private result: se
    more than expert graders do. Decorrelating the three OA columns on the final output,
    `out_t = pct(pct(f_t) - a/2 * sum_o w(t,o) pct(f_o))`, was validated on 2,399 expert-read OAI knees (MOAKS) with three OAI-free
    models before any submission, then confirmed on the leaderboard: c4 .958, then eoa10 .959, eoa20, pw30 (pair-weighted), then
-   the `swide` stack .960.
+   the `swide` stack .960. On the private board E-OA held: every E-OA entry scored .944, the plain c4 / R6 bases .943.
 3. **Small stacked tweaks on top** (`swide`): pair-weighted E-OA at a .25, Lateral OA decorrelated from Medial Meniscus (.05) and MCL
    decorrelated from Medial Meniscus (.1).
 
@@ -32,6 +36,7 @@ picked on the 58 hand-labelled studies were consistently negative on the leaderb
 
 ## Layout
 
+- `writeup/`: the Kaggle solution writeup, its figures and the scripts that draw them.
 - `HANDOFF.md`: running handoff, newest block first (start here).
 - `PROGRESS_*.md`: daily logs. `session_2026-10-15/PREREG_10-15.md`: pre-registrations, amendments and leaderboard reads.
 - `session_YYYY-MM-DD/`: each day's builders (`build_*.py`), gates (`probe_check*.py`, `*_commit_gate.py`), submit ticks
@@ -47,5 +52,5 @@ caches, kernel outputs, logs, scraped forum text and all credentials. The `.giti
 pre-push audit removed files that quoted competition report text or a third party's personal details.
 
 Third-party code: several folders (`_nb/`, `_edge/`, `kernels/`, `research_1008/A_pulled/`, various `pulled_*` / `src/` folders) hold
-copies of other Kaggle users' public notebooks that our kernels were built on. They are kept for reproducibility in this private
-repo; credit belongs to their original authors on Kaggle.
+copies of other Kaggle users' public notebooks that our kernels were built on. They are kept for reproducibility;
+credit belongs to their original authors on Kaggle.

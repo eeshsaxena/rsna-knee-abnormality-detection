@@ -1,0 +1,2 @@
+246th Place (Silver): Report Labels Are Not Expert Labels
+A public-weights ensemble plus one validated post-processing step: decorrelating the three osteoarthritis compartments.

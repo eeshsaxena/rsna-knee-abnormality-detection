@@ -10,6 +10,8 @@
 !*.ipynb
 !kernel-metadata.json
 !.gitignore
+!writeup/figs/*.png
+!writeup/*.txt
 
 # directories that stay out entirely, even for allowlisted extensions
 _data/
