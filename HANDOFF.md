@@ -1,3 +1,6 @@
+# >>> UPDATE 2026-10-23 (repo) <<<
+- Pushed to PRIVATE GitHub repo https://github.com/eeshsaxena/rsna-knee-abnormality-detection (branch main, commit 648908d): 4,300 code / doc files (allowlist .gitignore). Pre-push audit (_audit/, not committed): no credentials; removed 148 report-text task files (relabel_pilot cc_tasks) and a teamup draft with third-party personal data; redacted one OAI id comment. Before going PUBLIC: see the audit's list (third-party notebooks, box IP, teammate names, license NOTICE).
+
 # >>> FINAL HANDOFF 2026-10-23 00:05 IST (competition closes 10-22 23:59 UTC = 10-23 05:29 IST) <<<
 **Final picks (selected by Eesh, confirmed via API 23:54 IST: SELECTED_COUNT 2, SELECTION_MATCHES_ARGS True):**
 - **A = swide 57464326** (STACK S_wide: c4 + pair-weighted E-OA a .25 + Lateral OA <- Medial Meniscus .05 + MCL <- Medial Meniscus .1), public .960.
