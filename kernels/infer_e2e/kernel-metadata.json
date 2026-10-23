@@ -1,0 +1,16 @@
+{
+  "id": "eeshsaxena/rsna-knee-infer-e2e",
+  "title": "rsna knee infer e2e",
+  "code_file": "infer_e2e.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [],
+  "competition_sources": ["rsna-knee-abnormality-detection"],
+  "kernel_sources": [],
+  "dataset_sources": ["eeshsaxena/rsna-knee-e2e-model"],
+  "model_sources": []
+}

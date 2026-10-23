@@ -1,0 +1,17 @@
+{
+  "id": "eeshsaxena/rsna-knee-preprocess-crop-out",
+  "title": "rsna knee preprocess crop out",
+  "code_file": "preprocess_crop_out.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "competition_sources": [
+    "rsna-knee-abnormality-detection"
+  ],
+  "kernel_sources": [],
+  "dataset_sources": [],
+  "model_sources": []
+}

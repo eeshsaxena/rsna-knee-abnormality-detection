@@ -1,0 +1,40 @@
+# R7-teacher RUN_LOG (fix agent; times IST 10-14). No em dashes.
+
+Scope: PLAN_TEACHER sec 8 action 1 (FX1-FX6 + PREREG_TEACHER Amendment A1 + realistic SIM dry run), then, on Eesh's "Ok R7"
+(relayed by main 14:50): R7-OOF full run (2 shards), merge + verify, label build + label gate, T_b box queue install ahead of L13,
+V224-F-S builder (not pushed until the student folds exist). Never submit; no datasets created.
+
+| time | step | result |
+|---|---|---|
+| 14:13-14:25 | read PLAN_TEACHER (sec 1, 6, 7, 8), labels/oof/plprobe RESULT, PREREG_TEACHER, code | 44 real hash-fold rows: 55.5 % of cells beyond the 1e-4 clip (MEASURED; review said 56.5 %) |
+| 14:25 | FX1/FX2/FX3 in build_teacher_labels.py, FX4 in make_sheets.sh + student_gate.py G0, FX5 G3' in student_gate.py, FX6 sim_r7_oof.py + r7_absz_ref44.json; pre-A1 copies kept (laptop labels/pre_a1/, box ~/r7t_labels/pre_a1/) | code staged to the box |
+| 14:28-14:31 | A1 dry run part 1 on box CPU (cores 34-39, nice 19): R0 regression, realistic SIM teacher, pre-A1 builder on it, A1 builder, F2 invariance, L0 negative controls, REAL-path guards | R0 byte-identical to pre-A1 SIM tables; L0 PASS on SIM (spread .0025); leak fold 2 -> DROP detected (+.038) but the build then hit an assert (T_a = v4 alone has hard 0/1 cells); leak folds 1+2 -> STOP exit 4; F2 tables identical; RG 4/4 |
+| 14:33 | fix: tables may be in [0, 1] (rows whose only source is v4 after an L0 DROP) + report v4-only rows | builder md5 a7f8823d |
+| 14:31-14:43 | trainer argv dry run (real fleet_train.py, CPU, 31 studies, 1 epoch, A1 SIMCHECK sheets) | T_b rc 0, T_a rc 0; ckpt args sel_labels == train_labels == table name (FX4) |
+| 14:35-14:44 | V224-F-S builder (v224f/build_v224fs.py, FX7 two-group F + FX8 5.0 h budget), offline sims on box CPU (tests/sim_fs_cells.py 15/15), gate v224fs_check.py on a mock 25-member output (tests/mock_fs_output.py: clean 32/32 PASS, 7/7 negatives FAIL) | not pushed |
+| 14:41 | Kaggle read-only: RUNNING_COUNT 0 | |
+| 14:42- | student gate stand-ins (E2, DT) with the A1 SIM teacher | running |
+| 14:49 | student gate stand-ins (A1 SIM) | E2: G2 F, G3' P (d -.0026); DT: G3 F, G3' F (d +.0470 > .0235); both VERDICT FAIL as designed |
+| 14:50-14:53 | builder recheck with the final builder (a7f8823d) | R0 byte-identical; B1 tables identical to those the TR/G runs used; F2 identical; leak1 DROP + tables written; leak2 STOP rc 4; RG 4/4 |
+| 14:55 | PREREG_TEACHER Amendment A1 appended + sha-frozen | sha256 456f38a94723cebad89cdcd1a5eb5774e5e8183e0765493aca15c3a8b3e15035 (pre-A1 part = first 14,577 bytes, sha 5d25ff95 unchanged) |
+| 14:55 | copied to box ~/r7t_labels/, laptop == box for PREREG + sha + all 16 frozen files; REAL guard with the real PREREG on box: sha OK, builder md5 listed OK (temp dir removed) | |
+| 14:56 | Kaggle RUNNING_COUNT 0 | first push attempt hit a laptop network / session drop (exit 4 / 107, nothing pushed: no push log) |
+| 15:28 | session restart; resume (coordinator relay of Eesh "Ok R7" 14:50) | |
+| 15:28 | Kaggle list --mine: nothing running (last run 08:08 UTC) -> pushed shard 0: `eeshsaxena/rsna-r7-oof` **v3 successfully pushed** (nb 358beef2), shard 1: `eeshsaxena/rsna-r7-oof-b` **v1 successfully pushed** (nb 202d67c7); both 2 x T4, budget 8.5 h, chunk 600, 2,248 / 2,159 studies | expected ~3.1-3.9 h + boot each (MODEL) -> ~18:45-19:30 |
+| 15:29 | watcher oof/watch_r7oof.sh (background, 120 s polls, network-error tolerant, fetches each output on COMPLETE/ERROR) -> oof/watch_r7oof.log | |
+| 15:33 | both shards still RUNNING 5 min after the push (no quota-refusal symptom) | FIXES_A1.md written |
+| 15:36 | after_r7oof.sh gained DRY / OUTCSV; dry test on out_commit_v1: verify ALL_PASS, merge 8 rows, A1 pre-check PASS (test files removed) | |
+| 15:56 | session restart; watcher re-armed (both shards RUNNING at 15:55). Plan change (main, relayed): rental agent trains T_b on 4x4090 once LABELS_READY exists; box queue gets T_a (seed 1048) ahead of L13, T_b lines as #HOLD fallback | |
+| 16:00 | rental kit made A1-compliant: kits/vast_r7t/remote/argv_template.txt `--eval_labels` = T_b table (185108e9), box_ops.sh ckpt check sel_labels == TABLE (16544ecd); box ~/vastR7T updated; `box_ops.sh argv-check 0-4` IDENTICAL to queue_r7tb.txt. kit.env name template not changed (agent-guard hook blocked copying a file named kit.env; cosmetic) | |
+| 16:05 | PREREG_TEACHER **Amendment A2** frozen: per-table labels_gate (T_b rental, T_a box), finalize_labels.sh (final/ + LABELS_READY with sha256), install_r7ta_top.sh (T_a ahead of L13, T_b #HOLD); tested in an isolated temp HOME on the box (PASS / FAIL cases as expected, temp removed) | sha256 9e987880432b3a316f9c5582f3045c91af2da3a4fd7ad59170e8038951497711; laptop == box |
+| 16:55 | shards RUNNING; box queue runner LAUNCHED L13 f2 16:29 (ends ~22:00, MODEL 5.6 h/fold) -> T_a f0 would start then | |
+| 18:08 | noted (main + rental agent): T_b rents ONLY via session_2026-10-15/rental_student/launch.sh; kits/vast_r7t is locked; this agent never launches a rental, it only writes final/ + LABELS_READY | shards still RUNNING |
+| 18:10-18:16 | **shard 0 COMPLETE** (rsna-r7-oof v3, session 9,708 s = 2.7 h): fetched to oof/out_full_s0m (12 MB); 2,248 / 2,248 scored, 0 not scored, full precision 2,248; per fold [538, 583, 550, 577]; verify_commit.py ALL_PASS (one fold model per study = its hash fold, finite p in [0, 1], csv == worker dumps) | shard 1 still RUNNING |
+| 18:19-18:22 | **shard 1 COMPLETE** (rsna-r7-oof-b v1, 10,140 s = 2.8 h), fetched to oof/out_full_s1m, 2,159 / 2,159 scored, full precision; verify ALL_PASS (0 FAIL). **Merged** oof/r7_oof_ALL.csv: 4,407 / 4,407 studies, per fold [1043, 1146, 1137, 1081] (== r7_fold_map), 0 conflicts, 0 missing, all rows full-precision finite z| (md5 49fb633a765ff9b17da27031f6bb69b6) | Kaggle GPU: both sessions ended, ~5.5 GPU-session-h total |
+| 18:21 | box: on_r7oof.sh with r7_oof_ALL.csv (CPU 34-39): PREREG sha 9e987880 OK, builder md5 listed OK, 4,407 rows, 0 missing, hash folds 0 mismatches, p vs sigmoid(z) 8.7e-08 | |
+| 18:21 | **L0 PASS**: fold AUC .9348 / .9344 / .9385 / .9313, spread .0071 (bar < .020), SE ~.004 | pre-A1 clip would have tied 53.4 % of REAL cells |
+| 18:21 | **LABEL_GATE PASS** (gold58 target AUC): v4 .8927, frac75 .9300, R7 .9217, **T_a .9298 (-.0002), T_b .9338 (+.0038)**; gold74 T_b .9401; R7~fleet Spearman .798 on the pool; tables T_b d206bbcf, T_a 9b58a3a2 | labels_gate T_b PASS, T_a PASS |
+| 18:22 | **finalize_labels.sh: ~/r7t_labels/final/LABELS_READY** written (T_b sha256 7c51bb3a..., T_a sha256 96520e0f..., receipt ed40244b...) -> the rental agent may start T_b | copies in labels/real_run/ |
+| 18:23 | **box queue: T_a (seed 1048) f0-f4 installed ahead of L13 f3/f4, T_b f0-f4 as #HOLD comments** (install_r7ta_top.sh: labels_gate T_a PASS, `qctl.sh top` x10, each `--check` 0 BAD; final check 7 job lines, 0 BAD; backups ~/queue/bak/queue.1014_1823*); running job L13 f2 (since 16:29) untouched; T_a f0 starts at its end (~22:00), 5 x 3.52 h = ~17.6 h -> ~15:40 10-15 (MODEL) | queue.txt md5 747d45dc |
+| 18:24 | watcher's own fetches (out_full_s0 / out_full_s1) byte-identical to the manual ones (r7_oof.csv md5 2ec12953 / 163ffad8) | |
+| 18:35-18:50 | **V224-FF-S builder** (main 18:30: V224-FLIP is the team best, the student entry goes on the flip base): `v224f/build_v224fs.py --base ff` builds on the commit-tested V224-FF20 kernel (asserted byte-identical, sha b86f8b9f) and patches the FX8 budgets in place: fleet start 5.5 -> 5.0 h (SAVE knobs + K2 MIN_START_MIN 168 -> 198), time-aware flip budget 4.9 -> 4.4 h (keeps V224-FF's 0.6 h margin); S-MERGE / K2 MEMBERS 25 / HF-S as V224-F-S (cells identical modulo tag). Revert proof = V224-FF20 bytes. Gate `v224f/v224ffs_check.py` (= v224ff_check with v224fs_check nested, flip budget 4.4, two-group END-TO-END). Stand-in builds tests/standin_v224ffs20 (nb 037f67a7) + REPLACE; mock FF-S output from the V224-FF20 commit: **V224FFS_CHECK PASS 14/14, 7/7 negatives FAIL**; F-S mock re-run 32/32 + 7/7 | not pushed (S checkpoints do not exist) |

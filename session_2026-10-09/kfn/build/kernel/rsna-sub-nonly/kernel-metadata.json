@@ -1,0 +1,20 @@
+{
+  "id": "eeshsaxena/rsna-sub-nonly",
+  "title": "rsna sub nonly",
+  "code_file": "rsna_sub_nonly.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "dataset_sources": [
+    "nartaa/rsna-knee-publication-swa-weights-20261007"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [
+    "rsna-knee-abnormality-detection"
+  ],
+  "model_sources": [],
+  "machine_shape": "NvidiaTeslaT4"
+}

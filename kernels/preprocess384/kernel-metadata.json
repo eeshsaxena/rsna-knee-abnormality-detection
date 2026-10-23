@@ -1,0 +1,16 @@
+{
+  "id": "eeshsaxena/rsna-knee-preprocess384",
+  "title": "rsna knee preprocess384",
+  "code_file": "preprocess384.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [],
+  "competition_sources": ["rsna-knee-abnormality-detection"],
+  "kernel_sources": [],
+  "dataset_sources": [],
+  "model_sources": []
+}

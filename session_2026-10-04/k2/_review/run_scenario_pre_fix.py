@@ -1,0 +1,190 @@
+# One K2 smoke scenario per process (harness only; nothing here ships):  python run_scenario.py <scenario>
+# Executes the APPENDED cells of a notebook built by make_k2_kernel.py (exact cell text, /kaggle prefixes rewritten
+# to a scratch root) in one namespace, as the notebook's last cells would run after the parent. Harness-only
+# redirections: parent globals T0 / COMP / ROOT and RSNA_COMP_ROOT are set here (the parent sets them on Kaggle);
+# torch.cuda reports 2 devices inside the FLEET cell only (workers forced to CPU with FLEET_ALLOW_CPU=1, laptop GPU
+# hidden); cv2 = round3 PIL shim; the crop cell runs on CPU via its own CROP_FLEET_ALLOW_CPU test hook.
+import os, sys, io, json, time, shutil, subprocess, glob, hashlib
+os.environ['CUDA_VISIBLE_DEVICES'] = ''                  # hide the laptop GPU from this process before torch loads
+os.environ['OMP_NUM_THREADS'] = '2'; os.environ['MKL_NUM_THREADS'] = '2'
+T = os.path.dirname(os.path.abspath(__file__)).replace('\\', '/')
+K2 = os.path.dirname(T)
+SP = os.path.dirname(K2)
+S = f'{T}/_smoke'
+SHIM = f'{SP}/round3/fleet_dry/shim'
+sys.path.insert(0, K2); sys.path.insert(0, SHIM)
+import numpy as np, pandas as pd
+import torch
+torch.set_num_threads(2)
+import k2_check
+TARGETS = k2_check.TARGETS
+
+SC = sys.argv[1]
+cfg = dict(nb='fleet', comp='big', fds='real', stub=None, crop=False, age_h=7.0, parent='normal', stale=False,
+           write_fail=None, fast_clock=False, expect_fleet='clean', expect_crop='none')
+SCEN = {
+    'fleet_normal':     {},
+    'fleet_commit3':    dict(comp='3', age_h=0.2),
+    'fleet_stub_ok':    dict(fds='stub', stub='ok'),
+    'fleet_lowtime':    dict(age_h=8.3, expect_fleet='fail'),
+    'fleet_fastfail':   dict(fds='stub', stub='fastfail', expect_fleet='fail'),
+    'fleet_valve':      dict(fds='stub', stub='valve', expect_fleet='fail'),
+    'fleet_hardstop':   dict(fds='stub', stub='hardstop', expect_fleet='fail'),
+    'fleet_hang':       dict(fds='stub', stub='hang', age_h=8.25, fast_clock=True, expect_fleet='fail'),
+    'fleet_stale':      dict(fds='stub', stub='fastfail', stale=True, expect_fleet='fail'),
+    'fleet_writefail':  dict(fds='stub', stub='ok', write_fail='submission_w40.csv', expect_fleet='fail'),
+    'fleet_nods':       dict(fds='none', expect_fleet='fail'),
+    'fleet_noparent':   dict(parent='missing', expect_fleet='fail'),
+    'fleet_badparent':  dict(parent='badcols', expect_fleet='fail'),
+    'comb_normal':      dict(nb='combined', crop=True, expect_crop='ok'),
+    'comb_stub_ok':     dict(nb='combined', fds='stub', stub='ok', crop=True, expect_crop='ok'),
+    'comb_fleetfail':   dict(nb='combined', fds='stub', stub='fastfail', crop=True, expect_fleet='fail', expect_crop='ok'),
+    'comb_nocrop':      dict(nb='combined', fds='stub', stub='ok', crop=False, expect_crop='fail'),
+    'comb_croplate':    dict(nb='combined_croplate', fds='stub', stub='ok', crop=True, age_h=8.6 - 22 / 60,
+                             expect_crop='fail'),
+    'comb_stale_cf':    dict(nb='combined', fds='stub', stub='fastfail', crop=False, stale=True,
+                             expect_fleet='fail', expect_crop='fail'),
+}
+cfg.update(SCEN[SC])
+R = f'{S}/run_{SC}'
+shutil.rmtree(R, ignore_errors=True)
+INP, WORK = f'{R}/input', f'{R}/working'
+os.makedirs(WORK); os.makedirs(f'{INP}/datasets/eeshsaxena')
+COMP = f'{S}/comp_big' if cfg['comp'] == 'big' else f'{S}/comp3'
+if cfg['fds'] != 'none':
+    shutil.copytree(f'{S}/ds/fleet_{cfg["fds"]}', f'{INP}/datasets/eeshsaxena/rsna-knee-cnxt-fleet')
+if cfg['crop']:
+    shutil.copytree(f'{S}/ds/crop', f'{INP}/datasets/eeshsaxena/rsna-knee-cropaug-members')
+# parent submission: test ids in a DIFFERENT row order (the fleet is reindexed to it)
+ids = pd.read_csv(f'{COMP}/test.csv', dtype=str).StudyInstanceUID.tolist()
+rng = np.random.default_rng(7)
+par = pd.DataFrame(rng.uniform(0, 1, (len(ids), 12)), columns=TARGETS); par.insert(0, 'StudyInstanceUID', ids)
+par = par.sample(frac=1, random_state=3).reset_index(drop=True)
+par[TARGETS] = par[TARGETS].rank(pct=True)                   # like the parent: per-label rank pct
+if cfg['parent'] == 'normal':
+    par.to_csv(f'{WORK}/submission.csv', index=False)
+elif cfg['parent'] == 'badcols':
+    par.rename(columns={'ACL': 'acl'}).to_csv(f'{WORK}/submission.csv', index=False)
+par_bytes = open(f'{WORK}/submission.csv', 'rb').read() if os.path.isfile(f'{WORK}/submission.csv') else None
+if cfg['stale']:
+    for f in ('submission_w20.csv', 'submission_w30.csv', 'submission_w40.csv', 'submission_fleetsolo.csv') + \
+            (('submission_cf.csv', 'submission_c15.csv', 'submission_cropsolo.csv') if cfg['nb'] != 'fleet' else ()):
+        par.to_csv(f'{WORK}/{f}', index=False)
+    json.dump({'clean': True, 'files': {}}, open(f'{WORK}/_k2_stage_fleet.json', 'w'))
+# ---- the appended cells, exact text from the built notebook
+NB = {'fleet': f'{S}/nb/rsna-sub-k2-fleet/rsna_sub_k2_fleet.ipynb',
+      'combined': f'{S}/nb/rsna-sub-k2-fleetcrop/rsna_sub_k2_fleetcrop.ipynb',
+      'combined_croplate': f'{S}/nb/rsna-sub-k2-croplate/rsna_sub_k2_croplate.ipynb'}[cfg['nb']]
+nb = json.load(open(NB, encoding='utf-8'))
+cells = [(c['metadata'].get('k2', '?'), ''.join(c['source'])) for c in nb['cells'][31:]]
+
+
+def redirect(src):
+    src = src.replace('/kaggle/input', INP).replace('/kaggle/working', WORK)
+    bad = [l for l in src.splitlines() if '/kaggle/' in l and not l.lstrip().startswith('#')]
+    assert not bad, bad[:3]
+    return src
+
+
+# ---- harness shims
+os.environ['RSNA_COMP_ROOT'] = COMP                          # the parent exports this (repro0946 cell 7)
+os.environ['CROP_FLEET_ALLOW_CPU'] = '1'                     # crop cell test hook (CPU members)
+for k in ('CROP_FLEET_WORK', 'CROP_FLEET_OVERRIDES', 'CROP_FLEET_INPUT'):
+    os.environ.pop(k, None)
+_Popen = subprocess.Popen
+
+
+def _popen(cmd, *a, env=None, **k):
+    env = dict(env or os.environ); env['CUDA_VISIBLE_DEVICES'] = '-1'; env['OMP_NUM_THREADS'] = '2'
+    env['PYTHONPATH'] = env.get('PYTHONPATH', '') + os.pathsep + SHIM; env['PYTHONWARNINGS'] = 'ignore'
+    env['FLEET_ALLOW_CPU'] = '1'
+    if cfg['stub']:
+        env['STUB'] = cfg['stub']
+    return _Popen(cmd, *a, env=env, **k)
+
+
+subprocess.Popen = _popen
+if cfg['write_fail']:
+    _rep = os.replace
+
+    def _replace(src, dst):
+        if str(dst).replace('\\', '/').endswith('/' + cfg['write_fail']):
+            raise OSError(28, 'No space left on device (injected)')
+        return _rep(src, dst)
+    os.replace = _replace
+if cfg['fast_clock']:
+    _rt, _t0 = time.time, time.time()
+    time.time = lambda: _t0 + (_rt() - _t0) * 200.0
+g = {'__name__': '__main__', 'T0': time.time() - cfg['age_h'] * 3600, 'COMP': COMP, 'ROOT': COMP}
+cell_s = {}
+_cuda = (torch.cuda.is_available, torch.cuda.device_count, torch.cuda.empty_cache)
+for name, src in cells:
+    if name == 'k2_fleet_stage':
+        torch.cuda.is_available = lambda: True; torch.cuda.device_count = lambda: 2; torch.cuda.empty_cache = lambda: None
+    t0 = time.perf_counter()
+    try:
+        exec(compile(redirect(src), name, 'exec'), g)
+        escaped = None
+    except BaseException as e:                               # must never happen: the cell would fail the notebook
+        escaped = repr(e)
+    finally:
+        torch.cuda.is_available, torch.cuda.device_count, torch.cuda.empty_cache = _cuda
+    cell_s[name] = round(time.perf_counter() - t0, 1)
+    assert escaped is None, f'exception escaped cell {name}: {escaped}'
+if cfg['write_fail']:
+    os.replace = _rep
+# ---- checks
+if cfg['parent'] == 'normal':
+    res, info = k2_check.check(WORK, cfg['expect_fleet'], cfg['expect_crop'])
+else:
+    res, info = [], {}
+extra = []
+if cfg['parent'] != 'normal':
+    extra.append(('bad/missing parent: no fail-loud file exists',
+                  not [f for f in os.listdir(WORK) if f.startswith('submission_')]))
+if cfg['parent'] == 'missing':
+    extra.append(('no parent: nothing written at all', not [f for f in os.listdir(WORK) if f.startswith('submission')]))
+    extra.append(('no parent: cell returned a receipt', isinstance(g.get('_k2_receipt'), dict)))
+if cfg['parent'] == 'badcols':
+    extra.append(('bad parent: submission.csv bytes untouched', open(f'{WORK}/submission.csv', 'rb').read() == par_bytes))
+if SC == 'fleet_lowtime':
+    extra.append(('lowtime: no worker was launched', not glob.glob(f'{WORK}/_fleet_*.npz')))
+    extra.append(('lowtime: why names the wall', 'before the wall' in str(g['_k2_receipt'].get('why'))))
+if SC in ('fleet_normal', 'comb_normal'):
+    rec = g['_k2_receipt']
+    extra.append(('real workers: no microbench on a > 3-study run', all(not b for b in rec.get('bench', []))))
+    extra.append(('real workers: decode s/study recorded', (rec.get('decode_s_per_study_per_thread') or 0) > 0))
+    extra.append(('real workers: 2 shards, 2 members each, nothing median-filled',
+                  rec.get('n_keep') == [2, 2] and rec.get('median_filled') == 0))
+if SC == 'fleet_commit3':
+    rec = g['_k2_receipt']
+    b = rec.get('bench', [])
+    extra.append(('commit run: microbench ms/member/study from every worker',
+                  len(b) == len(rec.get('gpus', [])) and all(len(x) == 2 and all(v > 0 for v in x.values()) for x in b)))
+for nm, wf in (('fleet_fastfail', 'rc'), ('fleet_valve', 'full member count'), ('fleet_hardstop', 'hit the wall'),
+               ('fleet_hang', 'after the wall'), ('fleet_nods', 'not attached'), ('fleet_writefail', 'No space left')):
+    if SC == nm:
+        extra.append((f'{nm}: why mentions "{wf}"', wf in str(g['_k2_receipt'].get('why'))))
+if SC in ('fleet_hang', 'fleet_fastfail', 'fleet_stale', 'comb_fleetfail'):
+    time.sleep(1)
+    # every worker the cell started must be dead (the cell kills and reaps them)
+    import psutil
+    me = psutil.Process()
+    kids = [c for c in me.children(recursive=True) if c.is_running() and c.status() != psutil.STATUS_ZOMBIE]
+    extra.append(('no worker left running after the cell', not kids))
+if SC == 'comb_croplate':
+    extra.append(('croplate: crop cell refused to start (MIN_START)', 'not started' in str(g['_k2c_receipt'].get('crop_why'))))
+if SC == 'comb_nocrop':
+    extra.append(('nocrop: crop stage disarmed, crop cell wrote nothing', g.get('_cf_receipt') is None))
+if cfg['nb'] != 'fleet':
+    extra.append(('crop cell CF_WORK was the sandbox', str(g.get('CF_WORK', '')).replace('\\', '/').endswith('/_k2_crop')))
+    extra.append(('crop env vars cleared after the stage', 'CROP_FLEET_WORK' not in os.environ))
+res += [(n, bool(c), '') for n, c in extra]
+for n, c, d in res:
+    print(f'{"PASS" if c else "FAIL"}  {n}  {d}')
+out = dict(scenario=SC, passed=sum(c for _, c, _ in res), checks=len(res), ok=all(c for _, c, _ in res), cell_s=cell_s,
+           why=str((g.get('_k2_receipt') or {}).get('why'))[:200],
+           crop=str((g.get('_k2c_receipt') or {}).get('group_C', ''))[:60] + ' | ' + str((g.get('_k2c_receipt') or {}).get('group_CF', ''))[:60],
+           info={k: info.get(k) for k in ('fleet_stage_min', 'worker_loop_min', 'bench', 'decode_s_per_study_per_thread',
+                                         'crop_cell_min', 'crop_members')})
+print('RESULT', json.dumps(out, default=str))

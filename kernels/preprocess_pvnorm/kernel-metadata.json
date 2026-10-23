@@ -1,0 +1,17 @@
+{
+  "id": "eeshsaxena/rsna-knee-preprocess-pvnorm",
+  "title": "rsna knee preprocess pvnorm",
+  "code_file": "preprocess_pvnorm.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "competition_sources": [
+    "rsna-knee-abnormality-detection"
+  ],
+  "kernel_sources": [],
+  "dataset_sources": [],
+  "model_sources": []
+}

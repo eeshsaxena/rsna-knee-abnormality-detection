@@ -1,0 +1,22 @@
+{
+ "id": "eeshsaxena/rsna-train-ttr-frac75-s1044-f12",
+ "title": "rsna-train-ttr-frac75-s1044-f12",
+ "code_file": "rsna_train_ttr_frac75_s1044_f12.ipynb",
+ "language": "python",
+ "kernel_type": "notebook",
+ "is_private": true,
+ "enable_gpu": true,
+ "enable_tpu": false,
+ "enable_internet": true,
+ "dataset_sources": [
+  "eeshsaxena/rsna-knee-fleet-train",
+  "eeshsaxena/rsna-knee-frac75-labels"
+ ],
+ "kernel_sources": [
+  "eeshsaxena/rsna-fleet-prep-s0",
+  "eeshsaxena/rsna-fleet-prep-s1"
+ ],
+ "competition_sources": [],
+ "model_sources": [],
+ "machine_shape": "NvidiaTeslaT4"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "swapiy/rsna-train-kc-friend",
+  "title": "rsna train kc friend",
+  "code_file": "rsna_train_kc_friend.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [
+    "eeshsaxena/rsna-knee-kc-store-v1",
+    "eeshsaxena/rsna-knee-kc-bundle-v1"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": [],
+  "machine_shape": "NvidiaTeslaT4"
+}

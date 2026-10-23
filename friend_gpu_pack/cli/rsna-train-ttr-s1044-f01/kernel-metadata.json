@@ -1,0 +1,16 @@
+{
+ "id": "YOUR_KAGGLE_USERNAME/rsna-train-ttr-s1044-f01",
+ "title": "rsna-train-ttr-s1044-f01",
+ "code_file": "rsna_train_ttr_s1044_f01.ipynb",
+ "language": "python",
+ "kernel_type": "notebook",
+ "is_private": true,
+ "enable_gpu": true,
+ "enable_tpu": false,
+ "enable_internet": true,
+ "dataset_sources": ["eeshsaxena/rsna-knee-fleet-train"],
+ "kernel_sources": ["eeshsaxena/rsna-fleet-prep-s0", "eeshsaxena/rsna-fleet-prep-s1"],
+ "competition_sources": [],
+ "model_sources": [],
+ "machine_shape": "NvidiaTeslaT4"
+}

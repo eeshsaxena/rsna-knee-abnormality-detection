@@ -1,0 +1,24 @@
+{
+  "id": "eeshsaxena/rsna-knee-infer",
+  "title": "rsna knee infer",
+  "code_file": "infer.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [
+    "cpu"
+  ],
+  "dataset_sources": [
+    "eeshsaxena/rsna-knee-head-weights"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [
+    "rsna-knee-abnormality-detection"
+  ],
+  "model_sources": [
+    "metaresearch/dinov2/pytorch/small/1"
+  ]
+}

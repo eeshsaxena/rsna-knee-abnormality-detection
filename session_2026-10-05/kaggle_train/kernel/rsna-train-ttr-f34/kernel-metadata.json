@@ -1,0 +1,21 @@
+{
+ "id": "eeshsaxena/rsna-train-ttr-f34",
+ "title": "rsna-train-ttr-f34",
+ "code_file": "rsna_train_ttr_f34.ipynb",
+ "language": "python",
+ "kernel_type": "notebook",
+ "is_private": true,
+ "enable_gpu": true,
+ "enable_tpu": false,
+ "enable_internet": true,
+ "dataset_sources": [
+  "eeshsaxena/rsna-knee-fleet-train"
+ ],
+ "kernel_sources": [
+  "eeshsaxena/rsna-fleet-prep-s0",
+  "eeshsaxena/rsna-fleet-prep-s1"
+ ],
+ "competition_sources": [],
+ "model_sources": [],
+ "machine_shape": "NvidiaTeslaT4"
+}

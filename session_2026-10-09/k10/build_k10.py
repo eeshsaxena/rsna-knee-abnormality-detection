@@ -1,0 +1,307 @@
+#!/usr/bin/env python3
+"""build_k10.py (2026-10-09, Claude; from build_k9.py). Local only: nothing is pushed, versioned or submitted.
+
+Members (one k10_collect.sh collect, k10/members.json, all RAW best checkpoints, every member TTR + TTA A+B, equal members):
+  set E  f{0..4}_s1045_ttr288frac75  TTR288, seed 1045, labels_frac75_logit.csv, 21 ep      key f{F}_s1045t288f75 (NEW)
+  set D  f{0..4}_s1043_ttr_frac75    TTR224, seed 1043, labels_frac75_logit.csv (K9 bytes)   key f{F}_s1043f75 (== K9)
+  set C  f{0..4}_s1044_ttr288mix50   TTR288, seed 1044, labels_mix50_logit.csv  (K9 bytes)   key f{F}_s1044t288 (== K9)
+Kits (each a NEW dataset slug, so the live K9 version of eeshsaxena/rsna-knee-cnxt-fleet is never versioned):
+  --kit k10   dataset eeshsaxena/rsna-knee-cnxt-fleet-k10 = E + D (10 members); kernels
+                K10-main  eeshsaxena/rsna-sub-k10-fleet  parent + fleet, STRICT W .50 (variants .40 / .60)
+                K10-solo  eeshsaxena/rsna-sub-k10-solo   the fleet alone
+              E REPLACES C (inference cap with the parent: at most two big sets; research sec 3.1 / 6). Set C refused.
+  --kit k10w  dataset eeshsaxena/rsna-knee-cnxt-fleet-k10w = C + D + E (15 members) for the parent-free FN10-3 ONLY; the
+              upload folder only: NO kernel is written here (a parent + 3-set kernel would break the inference cap).
+K10-DS: the kernels are built by the UNCHANGED k9 path (build_k2.py + make_k2_kernel.py, K5 cell e37f0604997cd40f), with
+the module constants DS_ID / DS_TITLE / FLEET_DS set to the kit slug; then cell 31's body is replaced by
+cells/k10_fleet_cell.py (make_k10_tools.py: the K5 cell with the 3 'rsna-knee-cnxt-fleet' strings -> the kit slug).
+Asserted: every other cell byte-identical, the cell-31 K2_CFG line unchanged, the K5 cell recovered by the reverse
+substitution, the kernel metadata == the K9 rule with only the fleet dataset slug changed.
+K10-KEY: E keys are new (asserted absent from every older manifest on disk); D / C keys equal their K9 keys and may only
+reappear with the SAME bytes (asserted against those manifests' sha256[:16]).
+
+  python build_k10.py --kit k10|k10w [--members_json k10/members.json] [--out DIR] [--overwrite]
+Default --out: k10/build (k10) / k10/build_w (k10w); an interim members.json gives build_i<N> / build_w_i<N> with
+DO_NOT_SUBMIT_INTERIM.txt; a simulation-root collect gives DO_NOT_PUSH_SIMULATION.txt (+ K5_BUILD.json do_not_submit).
+"""
+import argparse, glob, hashlib, json, os, shutil, sys, time
+
+HERE = os.path.dirname(os.path.abspath(__file__)).replace('\\', '/')
+SP = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+K2_META = f'{SP}/k2/build/kernel/rsna-sub-k2-fleet/kernel-metadata.json'
+MIX50, FRAC75 = 'labels_mix50_logit.csv', 'labels_frac75_logit.csv'
+SETS = {(1045, 288, FRAC75): 'E', (1043, 224, FRAC75): 'D', (1044, 288, MIX50): 'C'}
+KEY_TAG = {'E': 't288f75', 'D': 'f75', 'C': 't288'}
+REFUSED = {(1043, 224, MIX50): 'set A (the K5 mix50 s1043 members) is not a K10 set',
+           (1044, 224, MIX50): 'set B (s1044 TTR224) is not a K10 set'}
+OLD_DS = 'eeshsaxena/rsna-knee-cnxt-fleet'
+KITS = {'k10': dict(sets=('E', 'D'), ds='rsna-knee-cnxt-fleet-k10', cell='cells/k10_fleet_cell.py',
+                    main='rsna-sub-k10-fleet', solo='rsna-sub-k10-solo', out='build'),
+        'k10w': dict(sets=('C', 'D', 'E'), ds='rsna-knee-cnxt-fleet-k10w', cell='cells/k10w_fleet_cell.py',
+                     main=None, solo=None, out='build_w')}
+TTR_SHA = 'f141aeed136dfc01'
+K5_CELL_SHA16 = 'e37f0604997cd40f'
+FROZEN = ('fleet_common.py', 'fleet_model.py', 'fleet_model_f2.py', 'fleet_model_ttr.py')
+K9_MAIN_META = f'{SP}/k9/build/kernel/rsna-sub-k9-fleet/kernel-metadata.json'
+
+
+def sha256(p):
+    h = hashlib.sha256()
+    with open(p, 'rb') as f:
+        for b in iter(lambda: f.read(1 << 22), b''):
+            h.update(b)
+    return h.hexdigest()
+
+
+def hs(s):
+    return hashlib.sha256(s.encode() if isinstance(s, str) else s).hexdigest()
+
+
+def set_of(r):
+    return SETS.get((int(r['seed']), int(r['ttr_size']), r.get('train_labels')))
+
+
+def member_key(r):
+    return f'f{r["fold"]}_s{r["seed"]}{KEY_TAG[set_of(r)]}'
+
+
+def older_keys():
+    """{key: set(sha16)} over every older kit manifest on disk (K2..K9 builds, sims included: a key is a key)."""
+    out = {}
+    for p in glob.glob(f'{SP}/k*/build*/upload/*/fleet_manifest.json') + glob.glob(f'{SP}/k9n/k9base/upload/*/fleet_manifest.json'):
+        if '/k10/' in p.replace('\\', '/'):
+            continue
+        m = json.load(open(p))
+        bdir = os.path.dirname(os.path.dirname(os.path.dirname(p.replace('\\', '/'))))
+        sim = os.path.isfile(f'{bdir}/DO_NOT_PUSH_SIMULATION.txt') or os.path.basename(bdir).startswith('build_sim')
+        for c in m['checkpoints']:
+            s = (m.get('sources') or {}).get(c)
+            s16 = (s.get('sha256') if isinstance(s, dict) else s) or ''
+            out.setdefault('_'.join(c.split('_')[:2]), set()).add('SIM:' + s16[:16] if sim else s16[:16])
+    return out
+
+
+def load_members(path, ckdir, kit):
+    m = json.load(open(path, encoding='utf-8'))
+    assert m.get('k10') is True, f'{path} is not a k10_collect.sh members.json'
+    assert not m.get('failed'), f'members.json lists failed folds {m["failed"]}: do not build'
+    allm = m['members']
+    on_disk = sorted(os.path.basename(p) for sd in (1043, 1044, 1045) for p in glob.glob(f'{ckdir}/f*_s{sd}_*_best.pt'))
+    assert on_disk == sorted(r['file'] for r in allm), \
+        f'k10/ckpt files {on_disk} != members.json {[r["file"] for r in allm]} (stale file? re-run k10_collect.sh)'
+    want = KITS[kit]['sets']
+    for r in allm:
+        st = (int(r['seed']), int(r['ttr_size']), r.get('train_labels'))
+        assert st not in REFUSED, f'{r["file"]}: {REFUSED.get(st)}'
+        assert st in SETS, f'{r["file"]}: (seed, ttr_size, train_labels) {st} is not a K10 set'
+        assert r.get('set') == SETS[st], f'{r["file"]}: members.json says set {r.get("set")}, its identity is set {SETS[st]}'
+    mem = sorted([r for r in allm if r['set'] in want], key=lambda r: (int(r['ttr_size']), r['seed'], r['fold']))
+    if kit == 'k10':
+        assert not any(r['set'] == 'C' for r in mem), 'K10: set E REPLACES set C (never parent + three sets)'
+    assert mem, 'no member of this kit in members.json'
+    ids = [(r['seed'], r['fold'], int(r['ttr_size']), r.get('train_labels')) for r in mem]
+    assert len(set(ids)) == len(ids), f'duplicate seed/fold/ttr_size/train_labels members {ids}'
+    for r in mem:
+        assert r.get('model_mod') == 'fleet_model_ttr' and r.get('model_sha') == TTR_SHA, (r['file'], r.get('model_sha'))
+        assert r.get('tag') == 'raw', f'{r["file"]}: tag {r.get("tag")} (K10 ships RAW best checkpoints)'
+        p = f'{ckdir}/{r["file"]}'
+        assert os.path.isfile(p), f'missing {p} (run k10_collect.sh)'
+        assert r['file'].startswith(f'f{r["fold"]}_s{r["seed"]}_raw_ttr{int(r["ttr_size"])}-'), r['file']
+        assert sha256(p) == r['sha256'], f'{r["file"]}: laptop sha256 != members.json'
+        r['path'] = p
+        r['key'] = member_key(r)
+        r['staged'] = r['key'] + r['file'][len(f'f{r["fold"]}_s{r["seed"]}'):]
+    keys = [r['key'] for r in mem]
+    assert len(set(keys)) == len(keys), f'duplicate shipped keys {keys}'
+    assert all(k.split('_')[1] not in ('s1043', 's1044', 's1045') for k in keys), f'K10-KEY: an untagged key in {keys}'
+    old = older_keys()
+    for r in mem:
+        prev = old.get(r['key'])
+        if r['set'] == 'E':
+            assert prev is None, f'K10-KEY: E key {r["key"]} already shipped by an older kit {prev}'
+        else:
+            real = {x for x in (prev or set()) if not x.startswith('SIM:')}   # simulation builds relabel other weights
+            assert not real or real == {r['sha256'][:16]}, \
+                f'K10-KEY: {r["key"]} was shipped with other bytes {prev} (this member {r["sha256"][:16]})'
+    return m, mem, old
+
+
+def patch_kernel(kdir, cell_new, slug_ds):
+    """K10-DS: cell 31 body K5 cell -> the kit cell; metadata fleet slug. Everything else asserted unchanged."""
+    import make_k10_tools as mt
+    meta_p = f'{kdir}/kernel-metadata.json'
+    meta = json.load(open(meta_p, encoding='utf-8'))
+    nbp = f'{kdir}/{meta["code_file"]}'
+    raw = open(nbp, 'rb').read()
+    nb = json.loads(raw.decode('utf-8'))
+    buf = json.dumps(nb, indent=1, ensure_ascii=False)
+    assert buf.encode('utf-8') == raw.replace(b'\r\n', b'\n'), 'notebook round trip differs (writer settings changed?)'
+    # make_k2_kernel writes in text mode (Windows: CRLF); the patched notebook is written the same way below
+    src = ''.join(nb['cells'][31]['source'])
+    hdr, body = src.split('\n', 1)
+    k5 = open(f'{HERE}/cells/k2_fleet_cell.py', encoding='utf-8').read()
+    assert hdr.startswith('K2_CFG = ') and body == k5 and hs(body)[:16] == K5_CELL_SHA16, 'cell 31 != K5 cell before the patch'
+    assert mt.unpatch_cell(cell_new, slug_ds) == k5
+    new = [dict(c) for c in nb['cells']]
+    new[31] = dict(nb['cells'][31]); new[31]['source'] = (hdr + '\n' + cell_new).splitlines(keepends=True)
+    nb2 = dict(nb); nb2['cells'] = new
+    with open(nbp, 'w', encoding='utf-8') as fh:
+        json.dump(nb2, fh, indent=1, ensure_ascii=False)
+    chk = json.load(open(nbp, encoding='utf-8'))
+    assert len(chk['cells']) == len(nb['cells']) == 32
+    for i in range(32):
+        if i != 31:
+            assert chk['cells'][i] == nb['cells'][i], f'cell {i} changed'
+    assert {k: v for k, v in chk['cells'][31].items() if k != 'source'} == {k: v for k, v in nb['cells'][31].items() if k != 'source'}
+    h2, b2 = ''.join(chk['cells'][31]['source']).split('\n', 1)
+    assert h2 == hdr and b2 == cell_new and mt.unpatch_cell(b2, slug_ds) == k5
+    ds = meta['dataset_sources']
+    assert f'eeshsaxena/{slug_ds}' in ds and OLD_DS not in ds, ds
+    if os.path.isfile(K9_MAIN_META):
+        m9 = json.load(open(K9_MAIN_META, encoding='utf-8'))
+        assert [d if d != OLD_DS else f'eeshsaxena/{slug_ds}' for d in m9['dataset_sources']] == ds, (ds, m9['dataset_sources'])
+        for key in ('kernel_sources', 'competition_sources', 'model_sources', 'machine_shape', 'enable_gpu',
+                    'enable_internet', 'language', 'kernel_type', 'is_private'):
+            assert meta.get(key) == m9.get(key), (key, meta.get(key), m9.get(key))
+    return hs(open(nbp, 'rb').read())
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--kit', required=True, choices=sorted(KITS))
+    ap.add_argument('--members_json', default=f'{HERE}/members.json')
+    ap.add_argument('--ckpt_dir', default=None)
+    ap.add_argument('--store', default=None)
+    ap.add_argument('--out', default=None)
+    ap.add_argument('--w_main', default='0.50')
+    ap.add_argument('--w_variants', default='0.40,0.60')
+    ap.add_argument('--overwrite', action='store_true')
+    a = ap.parse_args(argv)
+    K = KITS[a.kit]
+    mjp = a.members_json.replace('\\', '/')
+    base = os.path.dirname(mjp)
+    ckdir = (a.ckpt_dir or f'{base}/ckpt').replace('\\', '/')
+    store = (a.store or f'{base}/_real/store').replace('\\', '/')
+    mj, mem, old = load_members(mjp, ckdir, a.kit)
+    names = [r['staged'] for r in mem]
+    specs = [r['path'] + (f'={r["key"]}' if r['staged'] != r['file'] else '') for r in mem]
+    tta = {n: 'AB' for n in names}
+    cnt = {s: sorted(r['fold'] for r in mem if r['set'] == s) for s in K['sets']}
+    interim = any(v != [0, 1, 2, 3, 4] for v in cnt.values())
+    sim = any('/k10_test/sim/' in str(r.get('run', '')) for r in mem)
+    if interim:
+        assert mj.get('do_not_submit') and mj.get('interim'), \
+            f'{cnt}: an INTERIM build needs a members.json marked do_not_submit (k10_collect.sh K10_INTERIM=1)'
+    else:
+        assert not mj.get('do_not_submit'), 'members.json is marked do_not_submit but every set is 5/5: re-collect'
+    if not a.out:
+        a.out = f'{base}/{K["out"]}' + (f'_i{len(mem)}' if interim else '')
+    a.out = a.out.replace('\\', '/')
+    for f in FROZEN:
+        assert sha256(f'{HERE}/code/{f}') == sha256(f'{SP}/k3/code/{f}'), f'{f} differs from K3 (model_sha contract)'
+    assert sha256(f'{HERE}/code/fleet_worker.py') == sha256(f'{SP}/k5/code/fleet_worker.py'), 'worker != the K5 worker'
+    assert sha256(f'{HERE}/code/pack_fleet_ds.py') == sha256(f'{SP}/k7/code/pack_fleet_ds.py'), 'pack tool != K7'
+    for f in ('build_k2.py', 'make_k2_kernel.py', 'k2_check.py', 'cells/k2_fleet_cell.py'):
+        assert sha256(f'{HERE}/{f}') == sha256(f'{SP}/k9/{f}'), f'{f} != the k9 copy (the proven K9 build path)'
+    import make_k10_tools as mt
+    gen = mt.make()
+    for p in ('cells/k10_fleet_cell.py', 'cells/k10w_fleet_cell.py'):
+        assert open(f'{HERE}/{p}', encoding='utf-8', newline='').read() == gen[p], f'{p} != make_k10_tools.make()'
+    cell_new = gen[K['cell']]
+    import build_k2 as bk
+    import make_k2_kernel as mk
+    ds_id = f'eeshsaxena/{K["ds"]}'
+    bk.DS_ID, bk.DS_TITLE, mk.FLEET_DS = ds_id, K['ds'], ds_id                 # K10-DS: module constants only
+    tta_s = ','.join(f'{n}={m}' for n, m in tta.items())
+    common = ['--out', a.out]
+    if a.kit == 'k10':
+        bk.main(sum((['--ckpt', s] for s in specs), []) +
+                ['--store', store, '--slug', K['main'], '--main_mode', 'strict', '--members', ','.join(names),
+                 '--w_main', a.w_main, '--w_variants', a.w_variants, '--tta', tta_s] + common + (['--overwrite'] if a.overwrite else []))
+        summ = bk.main(['--kernel_only', '--slug', K['solo'], '--main_mode', 'solo', '--members', ','.join(names),
+                        '--w_main', a.w_main, '--w_variants', a.w_variants] + common)
+    else:
+        tmp_slug = 'rsna-sub-k10w-uploadonly-NOTAKERNEL'
+        summ = bk.main(sum((['--ckpt', s] for s in specs), []) +
+                       ['--store', store, '--slug', tmp_slug, '--main_mode', 'solo', '--members', ','.join(names),
+                        '--w_main', a.w_main, '--w_variants', a.w_variants, '--tta', tta_s] + common + (['--overwrite'] if a.overwrite else []))
+        shutil.rmtree(f'{a.out}/kernel')                                        # upload only: no parent + 3-set kernel exists
+        summ['kernels'] = []
+        json.dump(summ, open(f'{a.out}/BUILD_SUMMARY.json', 'w'), indent=1, default=str)
+    up = summ['upload']
+    assert up['path'].endswith(f'/upload/{K["ds"]}'), up['path']
+    meta_ds = json.load(open(f'{up["path"]}/dataset-metadata.json'))
+    assert meta_ds['id'] == ds_id and meta_ds['title'] == K['ds'], meta_ds
+    assert up.get('manifest') == names and up.get('tta') == tta, (up.get('manifest'), names)
+    n_probe = len({s for r in summ['members'] for s in r['decode_probe']})
+    assert 'fleet_model_ttr.py' in up['files'] and len(up['files']) == 5 + len(names) + 2 + n_probe, up['files']
+    assert sha256(f'{up["path"]}/fleet_worker.py') == sha256(f'{HERE}/code/fleet_worker.py'), 'shipped worker != k10/code'
+    man = json.load(open(f'{up["path"]}/fleet_manifest.json', encoding='utf-8'))
+    srcs = man.get('sources') or {}
+    assert {k: (v or {}).get('tta') for k, v in srcs.items()} == tta, ('manifest tta', srcs)
+    for r in mem:
+        s16 = (srcs.get(r['staged']) or {}).get('sha256') or ''
+        assert s16[:16] == r['sha256'][:16], (r['staged'], s16, r['sha256'][:16])
+        assert sha256(f'{up["path"]}/{r["staged"]}') == r['sha256'], f'{r["staged"]}: shipped bytes != collected {r["file"]}'
+    wkeys = ['_'.join(n.split('_')[:2]) for n in man['checkpoints']]
+    assert len(wkeys) == len(set(wkeys)), f'the worker would refuse duplicate keys {sorted(wkeys)}'
+    by_staged = {x['staged']: x for x in mem}
+    for r in summ['members']:
+        x = by_staged[r['staged']]
+        assert (int(r['fold']) == x['fold'] and int(r['seed']) == x['seed'] and int(r['ttr_size']) == int(x['ttr_size'])
+                and r['train_labels'] == x['train_labels'] and r['key'] == x['key']
+                and r['epoch_1based'] == x['epoch'] and abs(float(r['cv']) - x['cv']) < 1e-12), (r, x)
+    kern = {}
+    if a.kit == 'k10':
+        k2m = json.load(open(K2_META, encoding='utf-8')) if os.path.isfile(K2_META) else None
+        ks = {k['slug']: k for k in summ['kernels']}
+        want = {K['main']: ('strict', float(a.w_main)), K['solo']: ('solo', None)}
+        assert set(ks) == set(want), sorted(ks)
+        for slug, (mode, w) in want.items():
+            cfg = ks[slug]['K2_CFG']
+            assert cfg['MAIN_MODE'] == mode and cfg['MEMBERS'] == names and cfg.get('TTA') == tta, (slug, cfg)
+            assert 'OUTER_FLAT' not in cfg
+            if w is not None:
+                assert abs(cfg['W_MAIN'] - w) < 1e-9
+            nb_sha = patch_kernel(ks[slug]['out'], cell_new, K['ds'])
+            meta = json.load(open(f'{ks[slug]["out"]}/kernel-metadata.json', encoding='utf-8'))
+            assert meta['id'] == f'eeshsaxena/{slug}' and meta['is_private'] is True
+            if k2m:
+                assert [d if d != OLD_DS else ds_id for d in k2m['dataset_sources']] == meta['dataset_sources']
+            kern[slug] = dict(mode=mode, w_main=cfg['W_MAIN'], dir=ks[slug]['out'], nb_sha16=nb_sha[:16],
+                              code_file=ks[slug]['code_file'], K2_CFG=cfg)
+            print(f'{slug}: 32 cells, cell 31 = K10-DS cell ({hs(cell_new)[:16]}), K2_CFG {cfg}, notebook sha256 {nb_sha[:16]}, '
+                  f'datasets {meta["dataset_sources"]}')
+    info = dict(built=time.strftime('%Y-%m-%d %H:%M:%S'), k8=True, k10=True, kit=a.kit, dataset=ds_id, interim=interim,
+                simulated=sim, do_not_submit=interim or sim, n_members=len(names), members=names,
+                sets={s: len(v) for s, v in cnt.items()}, folds=[r['fold'] for r in mem], tta=tta, expect_tta=tta_s,
+                worker_sha16=sha256(f'{HERE}/code/fleet_worker.py')[:16], k5_cell_sha16=K5_CELL_SHA16,
+                cell_sha16=hs(cell_new)[:16], cell_file=K['cell'],
+                picks=[dict({k: r[k] for k in ('set', 'seed', 'fold', 'ttr_size', 'train_labels', 'tag', 'epoch', 'epochs',
+                                               'cv', 'other_tag_cv', 'file', 'key', 'staged', 'sha256', 'source')},
+                            suffix=r.get('suffix'), oof=r.get('oof'), kaggle_receipt=r.get('kaggle_receipt'),
+                            vast_receipt=r.get('vast_receipt'))
+                       for r in mem],
+                upload=dict(path=up['path'], mb=up['mb'], files=len(up['files'])), kernels=kern,
+                members_json=mjp, members_json_sha256=sha256(mjp), members_json_generated=mj.get('generated'),
+                set_status={s: (mj.get(f'set_{s.lower()}') or {}).get('status') for s in K['sets']})
+    json.dump(info, open(f'{a.out}/K5_BUILD.json', 'w'), indent=1)
+    for fn, cond, txt in (('DO_NOT_PUSH_SIMULATION.txt', sim, 'SIMULATION BUILD (members from the ~/k10_test/sim root).'),
+                          ('DO_NOT_SUBMIT_INTERIM.txt', interim, f'INTERIM BUILD ({cnt}).')):
+        if cond:
+            open(f'{a.out}/{fn}', 'w').write(txt + ' TEST ONLY. NEVER version the upload folder, NEVER push these '
+                                             'kernels, NEVER submit. K5_BUILD.json: do_not_submit true.\n')
+    keys = [f'{r["set"]}:{r["key"]}' for r in mem]
+    tag = (f'INTERIM ({len(mem)} members {cnt}) -- TEST ONLY, NEVER SUBMIT' if interim
+           else f'FINAL ({len(mem)} members: {" + ".join(f"{s} 5/5" for s in K["sets"])}: {keys})')
+    if sim:
+        tag = 'SIMULATION (members from ~/k10_test/sim: TEST ONLY, NEVER VERSION / PUSH / SUBMIT) ' + tag
+    print(f'\nK10 BUILD OK [{a.kit}] {tag}: upload {up["path"]} ({up["mb"]} MB, {len(up["files"])} files, dataset {ds_id}) | '
+          f'kernels {list(kern) or "none (upload only)"}')
+    print(f'expect_members: {",".join(names)}')
+    return info
+
+
+if __name__ == '__main__':
+    main()

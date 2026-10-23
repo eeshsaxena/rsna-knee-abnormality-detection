@@ -1,0 +1,40 @@
+# ALLOWLIST: ignore everything, then re-include code and docs only.
+# Never commit: competition data (DICOM, CSV labels, reports), OAI-derived files, model weights, caches, outputs, logs,
+# credentials (.env, kaggle.json), scraped forum text, or pulled third-party notebooks.
+*
+!*/
+!*.md
+!*.py
+!*.sh
+!*.cmd
+!*.ipynb
+!kernel-metadata.json
+!.gitignore
+
+# directories that stay out entirely, even for allowlisted extensions
+_data/
+_labels/
+**/pulled/
+**/pulled2/
+**/forum_raw/
+**/forum_raw2/
+**/raw/
+**/__pycache__/
+**/*_env/
+**/_*_env/
+**/out_*/
+**/sim/
+**/sim_*/
+
+# credentials, always
+.env
+*.env
+kaggle.json
+**/kaggle.json
+
+# audit working files
+_audit/
+
+# audit exclusions 10-23: competition report text, third-party personal data
+**/cc_tasks/
+session_2026-10-15/teamup/DRAFT_pand999.md

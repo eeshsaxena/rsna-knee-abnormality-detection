@@ -1,0 +1,22 @@
+{
+  "id": "eeshsaxena/rsna-knee-infer-lora",
+  "title": "rsna knee infer lora",
+  "code_file": "infer.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [
+    "cpu"
+  ],
+  "dataset_sources": [
+    "eeshsaxena/rsna-knee-lora-merged"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [
+    "rsna-knee-abnormality-detection"
+  ],
+  "model_sources": []
+}

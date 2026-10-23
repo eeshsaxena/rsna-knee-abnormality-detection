@@ -1,0 +1,25 @@
+{
+  "id": "hengck23/mavit-288-baseline-01-1-5sec-study-1gpu",
+  "id_no": 137599842,
+  "title": "mavit-288-baseline-01 : 1.5sec/study @ 1gpu",
+  "code_file": "mavit-288-baseline-01-1-5sec-study-1gpu.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": false,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [
+    "gpu"
+  ],
+  "dataset_sources": [
+    "hengck23/hengck23-rnsa-knee"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [
+    "rsna-knee-abnormality-detection"
+  ],
+  "model_sources": [],
+  "docker_image": "gcr.io/kaggle-private-byod/python@sha256:2757e0c7d1e0a9cb43da657b97e223c321a98f5014bdf64f44f2f6b083ad2b2f",
+  "machine_shape": "NvidiaTeslaT4"
+}

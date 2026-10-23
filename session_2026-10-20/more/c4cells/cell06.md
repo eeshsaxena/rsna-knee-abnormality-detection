@@ -1,0 +1,1 @@
+## Stage 2: heliosli's R7 ConvNeXt-small, four folds (public, unchanged)

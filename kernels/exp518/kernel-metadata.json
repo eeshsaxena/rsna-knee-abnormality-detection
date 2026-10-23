@@ -1,0 +1,18 @@
+{
+  "id": "eeshsaxena/rsna-knee-exp518",
+  "title": "rsna knee exp518",
+  "code_file": "exp518.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [],
+  "competition_sources": [
+    "rsna-knee-abnormality-detection"
+  ],
+  "kernel_sources": [],
+  "dataset_sources": [],
+  "model_sources": []
+}
