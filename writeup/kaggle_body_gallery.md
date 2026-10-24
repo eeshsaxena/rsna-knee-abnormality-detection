@@ -144,7 +144,7 @@ Both landed at .944, rank 246 / 6,425 (silver cut: rank 321). We slipped from ~1
 
 ## Code and sources
 
-Our code (kernel builders, gates, OAI and gold58 validation scripts, pre-registration log) is in a private repository for now. Public work we built on:
+Final notebook (pick A, swide): https://www.kaggle.com/code/eeshsaxena/rsna-sub-v224r6c4pw25lomm05mcl10j . All our code (kernel builders, gates, OAI and gold58 validation scripts, the pre-registration log and daily notes): https://github.com/eeshsaxena/rsna-knee-abnormality-detection (data, weights and OAI-derived files are not included). Public work we built on:
 
 - **dreaddevelopment:** the original Raptor CoAtNet/MIL inference recipe and baseline weights (raptor-knee-widedense), from which nartaa's checkpoints were retrained.
 - **nartaa:** rsna-knee-publication-swa-weights-20261007 (Raptor r384 and r224), the inference notebooks rsna-knee-0949-anatomical-mirror and rsna-knee-0945-efficient-224crop, rsna-knee-s6fall-solo and rsna-knee-s6fall-weights (S6fall), and the training recipe in the forum post "Reaching 0.949 with one CoAtNet".

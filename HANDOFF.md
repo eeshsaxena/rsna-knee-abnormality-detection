@@ -1,8 +1,13 @@
+# >>> UPDATE 2026-10-24 (project summary) <<<
+- Added PROJECT_SUMMARY.md (repo root, ~4,900 words): result, competition, timeline, c4 + E-OA + picks, OAI validation, what did not work, process, governance, lessons, repo map, team. Built from a 6-reader fact extraction + 3-lens review (facts / hygiene / clarity) + fix pass; linked from README.
+- Local writeup copies synced to the published text (GitHub link instead of 'private repository for now').
+- Open item for Eesh: the university server's ssh user + private LAN address appear in ~134 tracked files (HANDOFF, FOR_NEXT_CLAUDE, scripts) of the now-public repo; not a credential, but scrub on request (history would need a rewrite to remove it fully).
+
 # >>> UPDATE 2026-10-23 23:30 IST: WRITEUP PUBLISHED, REPO PUBLIC <<<
 - **Kaggle solution writeup PUBLISHED** (Eesh's go, posted via his Chrome): https://www.kaggle.com/competitions/rsna-knee-abnormality-detection/writeups/246th-place-silver-report-labels-are-not-expert . Title "246th Place (Silver): Report Labels Are Not Expert Labels"; 5 gallery figures (coupling, pipeline, oai_validation, lb_progress, dose_curve); tags Medicine / Computer Vision / Ensembling; project links = final notebook + GitHub repo; listed on the competition Writeups tab. Source: writeup/kaggle_body_gallery.md (+ kaggle_title.txt), figures writeup/figs/ (src/make_figs.py).
 - Final notebook eeshsaxena/rsna-sub-v224r6c4pw25lomm05mcl10j made PUBLIC (pick A, swide).
 - GitHub repo https://github.com/eeshsaxena/rsna-knee-abnormality-detection made PUBLIC (Eesh's choice); README now has the private result + writeup link; writeup/ committed (figures allowlisted).
-- Acknowledgements name teammates dreaddevelopment, jingshuifu, akkigupta2005 (Akanksha Gupta).
+- Team (Kaggle LB row + writeup): eeshsaxena, swapiy, kmrsuman, akkigupta2005 (Akanksha Gupta). dreaddevelopment and jingshuifu are credited public-work authors, NOT teammates (corrected 10-24).
 - Nothing left open for this competition.
 
 # >>> PRIVATE RESULT 2026-10-23 13:20 IST <<<

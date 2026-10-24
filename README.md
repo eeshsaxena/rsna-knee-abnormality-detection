@@ -17,6 +17,8 @@ Solution writeup (figures, method, what did not work):
 https://www.kaggle.com/competitions/rsna-knee-abnormality-detection/writeups/246th-place-silver-report-labels-are-not-expert
 (source and figures in `writeup/`). Final notebook: https://www.kaggle.com/code/eeshsaxena/rsna-sub-v224r6c4pw25lomm05mcl10j
 
+**Full project summary** (timeline, method, validation, what did not work, process, lessons): [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)
+
 ## What moved the score
 
 1. **Base ensemble (c4):** Raptor CoAtNet r384 + r224 (rank mix .75 / .25), the heliosli compact ConvNeXt-S bundle (R6, 4 folds, flip
